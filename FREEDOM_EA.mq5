@@ -80,6 +80,8 @@ int tickBufferCount = 0;
 double speedTick15Sec = 0;
 double speedTick5Sec = 0;
 double speedTickPrev5Sec = 0;
+double lastCountedBidForSpeed = 0.0;
+bool hasLastCountedBidForSpeed = false;
 double tickBuffer[];
 int bufferSize = 0;
 double upRatio = 0;
@@ -779,7 +781,20 @@ void UpdateDeviation(double newPrice)
 
 void UpdateTickSpeeds()
 {
-   datetime now = TimeCurrent();
+   MqlTick tick;
+   if(!SymbolInfoTick(_Symbol, tick))
+      return;
+
+   double bid = NormalizeDouble(tick.bid, _Digits);
+
+   // MT4-like behavior: count only ticks where BID changed (ignore ask-only updates common in MT5).
+   if(hasLastCountedBidForSpeed && bid == lastCountedBidForSpeed)
+      return;
+
+   hasLastCountedBidForSpeed = true;
+   lastCountedBidForSpeed = bid;
+
+   datetime now = (tick.time > 0 ? tick.time : TimeCurrent());
 
    tickTimeBuffer[tickBufferIndex] = now;
    tickBufferIndex = (tickBufferIndex + 1) % TickBufforSize;
